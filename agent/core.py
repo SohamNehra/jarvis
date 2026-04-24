@@ -3,20 +3,28 @@ from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated
 import operator
-from config import ANTHROPIC_API_KEY, MODEL_NAME, TEMPERATURE
+from config import ANTHROPIC_API_KEY, LOOP_CHECK_MODEL, MODEL_NAME, OPENAI_API_KEY, TEMPERATURE , DEBUG
 from tools.web_search import web_search
 from tools.calculator import calculator
 from tools.time_tool import get_current_time
 from memory.memory import save_history, load_history
 from langgraph.types import Send
 import time
+from langchain_openai import ChatOpenAI
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 TOOLS = [web_search, calculator, get_current_time]
+AGENT_TIMEOUT_SECONDS = 60
 
 llm = ChatAnthropic(
     model=MODEL_NAME,
     temperature=TEMPERATURE,
     api_key=ANTHROPIC_API_KEY 
+)
+loop_check_llm = ChatOpenAI(
+    model=LOOP_CHECK_MODEL,
+    temperature=0,
+    api_key=OPENAI_API_KEY
 )
 
 llm_with_tools = llm.bind_tools(TOOLS)
@@ -25,7 +33,8 @@ llm_with_tools = llm.bind_tools(TOOLS)
 class AgentState(TypedDict):
     messages: Annotated[list, operator.add]
     iteration_count: int
-    current_tool_call: dict  
+    current_tool_call: dict
+    tool_call_history: Annotated[list, operator.add]
 
 # --- Nodes ---
 def agent_node(state: AgentState) -> AgentState:
@@ -38,19 +47,23 @@ def agent_node(state: AgentState) -> AgentState:
 def execute_single_tool(state: AgentState) -> AgentState:
     tool_call = state["current_tool_call"]
     
-    start = time.time()
-    print(f">> START tool: {tool_call['name']} | thread time: {start:.3f}")
+    if DEBUG:
+        start = time.time()
+        print(f">> START tool: {tool_call['name']} | thread time: {start:.3f}")
     
     tool_to_run = next(t for t in TOOLS if t.name == tool_call['name'])
     tool_result = tool_to_run.invoke(tool_call['args'])
     
-    end = time.time()
-    print(f">> END tool: {tool_call['name']} | took: {end - start:.3f}s")
+    if DEBUG:
+        end = time.time()
+        print(f">> END tool: {tool_call['name']} | took: {end - start:.3f}s")
     
     return {"messages": [ToolMessage(
         content=tool_result,
         tool_call_id=tool_call['id']
-    )]}
+    )],
+    "tool_call_history": [{"name": tool_call['name'], "args": tool_call['args']}]
+    }
 
 def route_tool_calls(state: AgentState) -> list:
     tool_calls = state["messages"][-1].tool_calls
@@ -63,17 +76,38 @@ def route_tool_calls(state: AgentState) -> list:
         for tool_call in tool_calls
     ]
 
+def check_loop(tool_call_history: list) -> bool:
+    """uses cheap LLM to detect if agent is stuck in a loop"""
+    
+    history_text = "\n".join([
+        f"- {t['name']}: {t['args']}" 
+        for t in tool_call_history
+    ])
+    
+    response = loop_check_llm.invoke([
+        SystemMessage(content="""You are a loop detector for an AI agent. 
+        Analyze the last tool calls and decide if the agent is stuck repeating 
+        itself or genuinely making progress. Reply with ONLY 'stuck' or 'progress'."""),
+        HumanMessage(content=f"Last tool calls:\n{history_text}\n\nStuck or progress?")
+    ])
+    
+    return response.content.strip().lower() == "stuck"
+
 # --- Edge condition ---
 def should_continue(state: AgentState) -> str:
     last_message = state["messages"][-1]
     
     if last_message.tool_calls:
-        # tools pending - must run them first, no shortcuts
         return "tools"
     
-    # only check iteration limit when no tools are pending
     if state["iteration_count"] >= 10:
         return "graceful_end"
+    
+    tool_history = state.get("tool_call_history", [])
+    if len(tool_history) >= 4:  # at least 4 tool calls have happened
+        if check_loop(tool_history[-4:]):
+            print(">> loop detected, asking user for guidance")
+            return "graceful_end"
     
     return "end"
 
@@ -127,11 +161,21 @@ def run_agent(user_input: str) -> str:
             *history,
             HumanMessage(content=user_input)
         ],
-        "iteration_count": 0
+        "iteration_count": 0,
+        "tool_call_history": []
     }
 
-    final_state = jarvis.invoke(initial_state)
-    final_message = final_state["messages"][-1]
+    def invoke():
+        return jarvis.invoke(initial_state)
 
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(invoke)
+        try:
+            final_state = future.result(timeout=AGENT_TIMEOUT_SECONDS)
+        except FuturesTimeoutError:
+            print(f">> timeout: agent exceeded {AGENT_TIMEOUT_SECONDS}s")
+            return "I ran out of time completing that task. Please try a simpler request or break it into smaller parts."
+
+    final_message = final_state["messages"][-1]
     save_history(final_state["messages"])
     return final_message.content
