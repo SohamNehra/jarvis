@@ -8,6 +8,8 @@ from tools.web_search import web_search
 from tools.calculator import calculator
 from tools.time_tool import get_current_time
 from memory.memory import save_history, load_history
+from langgraph.types import Send
+import time
 
 TOOLS = [web_search, calculator, get_current_time]
 
@@ -22,7 +24,8 @@ llm_with_tools = llm.bind_tools(TOOLS)
 # --- State ---
 class AgentState(TypedDict):
     messages: Annotated[list, operator.add]
-    iteration_count: int 
+    iteration_count: int
+    current_tool_call: dict  
 
 # --- Nodes ---
 def agent_node(state: AgentState) -> AgentState:
@@ -32,21 +35,33 @@ def agent_node(state: AgentState) -> AgentState:
         "iteration_count": state["iteration_count"] + 1
     }
 
-def tools_node(state: AgentState) -> AgentState:
-    """runs whatever tools the LLM requested"""
+def execute_single_tool(state: AgentState) -> AgentState:
+    tool_call = state["current_tool_call"]
+    
+    start = time.time()
+    print(f">> START tool: {tool_call['name']} | thread time: {start:.3f}")
+    
+    tool_to_run = next(t for t in TOOLS if t.name == tool_call['name'])
+    tool_result = tool_to_run.invoke(tool_call['args'])
+    
+    end = time.time()
+    print(f">> END tool: {tool_call['name']} | took: {end - start:.3f}s")
+    
+    return {"messages": [ToolMessage(
+        content=tool_result,
+        tool_call_id=tool_call['id']
+    )]}
+
+def route_tool_calls(state: AgentState) -> list:
     tool_calls = state["messages"][-1].tool_calls
-    results = []
-
-    for tool_call in tool_calls:
-        print(f">> running tool: {tool_call['name']} | args: {tool_call['args']}")
-        tool_to_run = next(t for t in TOOLS if t.name == tool_call['name'])
-        tool_result = tool_to_run.invoke(tool_call['args'])
-        results.append(ToolMessage(
-            content=tool_result,
-            tool_call_id=tool_call['id']
-        ))
-
-    return {"messages": results}
+    return [
+        Send("execute_tool", {
+            "current_tool_call": tool_call,
+            "messages": [],        # empty - executor only needs the tool call
+            "iteration_count": state["iteration_count"]
+        })
+        for tool_call in tool_calls
+    ]
 
 # --- Edge condition ---
 def should_continue(state: AgentState) -> str:
@@ -62,6 +77,10 @@ def should_continue(state: AgentState) -> str:
     
     return "end"
 
+def route_tools_node(state: AgentState) -> AgentState:
+    """pass-through node - just triggers the parallel routing edge"""
+    return {}
+
 def graceful_end_node(state: AgentState) -> AgentState:
     response = llm_with_tools.invoke(
         state["messages"] + [HumanMessage(content="You've hit your iteration limit. Summarize what you found so far.")]
@@ -73,18 +92,27 @@ def build_graph():
     graph = StateGraph(AgentState)
 
     graph.add_node("agent", agent_node)
-    graph.add_node("tools", tools_node)
+    graph.add_node("execute_tool", execute_single_tool)  # replaces tools_node
     graph.add_node("graceful_end", graceful_end_node)
+    graph.add_node("route_tools", route_tools_node)
 
     graph.set_entry_point("agent")
-
-    graph.add_edge("tools", "agent")
 
     graph.add_conditional_edges(
         "agent",
         should_continue,
-        {"tools": "tools", "end": END, "graceful_end": "graceful_end"}
-)
+        {"tools": "route_tools", "end": END, "graceful_end": "graceful_end"}
+    )
+    
+    # this edge dynamically spawns parallel Send instances
+    graph.add_conditional_edges(
+        "route_tools",
+        route_tool_calls,
+        ["execute_tool"]  # tells graph these Sends route to execute_tool
+    )
+
+    graph.add_edge("execute_tool", "agent")
+    graph.add_edge("graceful_end", END)
 
     return graph.compile()
 

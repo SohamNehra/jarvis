@@ -5,59 +5,6 @@
   },
   {
     "role": "ai",
-    "content": [
-      {
-        "text": "I'll help you with all three tasks. Let me search for the current Bitcoin price, calculate the value of 0.75 BTC, and get the current time.",
-        "type": "text"
-      },
-      {
-        "id": "toolu_01TxCpquhiTMPH3g6BUz5wvz",
-        "caller": {
-          "type": "direct"
-        },
-        "input": {
-          "query": "bitcoin price current"
-        },
-        "name": "web_search",
-        "type": "tool_use"
-      },
-      {
-        "id": "toolu_015DzqYMJDESrRLFekgE3vqv",
-        "caller": {
-          "type": "direct"
-        },
-        "input": {},
-        "name": "get_current_time",
-        "type": "tool_use"
-      }
-    ]
-  },
-  {
-    "role": "ai",
-    "content": [
-      {
-        "text": "Great! Now let me calculate the value of 0.75 BTC using the current price. I'll use the average of the prices shown:",
-        "type": "text"
-      },
-      {
-        "id": "toolu_011tdotGm5uAjAGVoCyML5oy",
-        "caller": {
-          "type": "direct"
-        },
-        "input": {
-          "expression": "0.75 * 77750.54"
-        },
-        "name": "calculator",
-        "type": "tool_use"
-      }
-    ]
-  },
-  {
-    "role": "ai",
-    "content": "Perfect! Here's the information you requested:\n\n**Bitcoin Price:**\n- Coinbase: $76,501.21\n- Crypto.com: $77,743.41\n- Kraken: $78,007.00\n\n**0.75 BTC Value:**\nUsing an average price of approximately $77,750.54, **0.75 BTC is worth approximately $58,312.91 USD**\n\n**Current Time:**\n**April 24, 2026 at 07:28:15 AM**\n\nBitcoin prices vary slightly across different exchanges, so you may want to check your preferred exchange for the most accurate price for your specific transaction."
-  },
-  {
-    "role": "ai",
-    "content": "# Summary of Findings\n\n**Bitcoin Price (Current):**\n- Coinbase: $76,501.21\n- Crypto.com: $77,743.41\n- Kraken: $78,007.00\n- Average: ~$77,750.54\n\n**0.75 BTC Value:**\n- Approximately **$58,312.91 USD** (based on average price)\n\n**Current Time:**\n- **April 24, 2026 at 07:28:15 AM**\n\nBitcoin prices vary slightly across different exchanges due to real-time market fluctuations. For the most accurate pricing, check your preferred exchange directly."
+    "content": "Perfect! Here's the information you requested:\n\n**Bitcoin Price:**\n- Coinbase: $76,437.41\n- Crypto.com: $77,743.41\n- Kraken: $78,007.00\n- Average: ~$77,729.27\n\n**0.75 BTC Value:**\n0.75 BTC is worth approximately **$58,296.95 USD** (based on the average price)\n\n**Current Time:**\n**April 24, 2026 at 8:05:38 AM**\n\nBitcoin prices vary slightly across different exchanges, so you may see minor differences depending on which platform you use for trading."
   }
 ]

@@ -6,23 +6,19 @@ MEMORY_FILE = "memory/chat_history.json"
 MAX_MESSAGES = 20  # sliding window size
 
 def save_history(messages: list):
-    """save messages to disk, keeping only last MAX_MESSAGES"""
-    
-    # strip SystemMessage before saving, we always add it fresh on load
     to_save = []
     for m in messages:
         if isinstance(m, HumanMessage):
             to_save.append({"role": "human", "content": m.content})
         elif isinstance(m, AIMessage):
-            to_save.append({"role": "ai", "content": m.content})
-        # skip ToolMessages and SystemMessages, not needed long term
+            # only save if it has actual text content, skip tool_use only messages
+            if m.content and isinstance(m.content, str) and m.content.strip():
+                to_save.append({"role": "ai", "content": m.content})
 
-    # sliding window - keep only last MAX_MESSAGES
     to_save = to_save[-MAX_MESSAGES:]
 
     with open(MEMORY_FILE, "w") as f:
         json.dump(to_save, f, indent=2)
-
 def load_history() -> list:
     if not os.path.exists(MEMORY_FILE):
         return []
