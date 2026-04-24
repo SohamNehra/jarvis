@@ -24,11 +24,13 @@ def save_history(messages: list):
         json.dump(to_save, f, indent=2)
 
 def load_history() -> list:
-    """load messages from disk"""
-
     if not os.path.exists(MEMORY_FILE):
-        return []  # first run, no history yet
-
+        return []
+    
+    # handle empty file
+    if os.path.getsize(MEMORY_FILE) == 0:
+        return []
+    
     with open(MEMORY_FILE, "r") as f:
         data = json.load(f)
 
