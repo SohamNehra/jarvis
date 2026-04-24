@@ -116,10 +116,34 @@ def route_tools_node(state: AgentState) -> AgentState:
     return {}
 
 def graceful_end_node(state: AgentState) -> AgentState:
-    response = llm_with_tools.invoke(
-        state["messages"] + [HumanMessage(content="You've hit your iteration limit. Summarize what you found so far.")]
+    # step 1: LLM summarizes situation and decides what to ask
+    assessment = llm.invoke(
+        state["messages"] + [HumanMessage(content="""
+        You are stuck or have hit a limit. Do the following:
+        1. Briefly summarize what you have accomplished so far
+        2. Explain exactly where you are stuck or what you need
+        3. Ask the user ONE specific question that would help you continue
+        Format: 
+        PROGRESS: [what you did]
+        STUCK: [what the problem is]
+        QUESTION: [your specific question for the user]
+        """)]
     )
-    return {"messages": [response]}
+    
+    print(f"\nJarvis: {assessment.content}\n")
+    
+    # step 2: wait for human input
+    user_response = input("You: ").strip()
+    
+    if not user_response:
+        user_response = "Please summarize what you found and stop."
+    
+    # step 3: add human response to messages and continue
+    return {
+        "messages": [assessment, HumanMessage(content=user_response)],
+        "iteration_count": 0,  # reset counter - fresh start with new guidance
+        "tool_call_history": []  # reset tool history too
+    }
 
 # --- Build the graph ---
 def build_graph():
@@ -146,7 +170,7 @@ def build_graph():
     )
 
     graph.add_edge("execute_tool", "agent")
-    graph.add_edge("graceful_end", END)
+    graph.add_edge("graceful_end", "agent")
 
     return graph.compile()
 
