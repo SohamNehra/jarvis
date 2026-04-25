@@ -14,8 +14,9 @@ from langgraph.types import Send
 import time
 from langchain_openai import ChatOpenAI
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from tools.code_executor import run_python_code
 
-TOOLS = [web_search, calculator, get_current_time, read_file, write_file, update_notes, read_notes, add_chat_summary]
+TOOLS = [web_search, calculator, get_current_time, read_file, write_file, update_notes, read_notes, add_chat_summary, run_python_code]
 AGENT_TIMEOUT_SECONDS = 60
 
 llm = ChatAnthropic(

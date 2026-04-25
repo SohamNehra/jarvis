@@ -10,3 +10,4 @@ MODEL_NAME = "claude-haiku-4-5-20251001"
 TEMPERATURE = 0
 DEBUG = True
 LOOP_CHECK_MODEL = "gpt-5.4-nano"
+SECURITY_CHECK_MODEL = "gpt-5.4-nano"
