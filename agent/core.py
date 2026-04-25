@@ -8,13 +8,14 @@ from tools.web_search import web_search
 from tools.calculator import calculator
 from tools.time_tool import get_current_time
 from tools.file_ops import read_file, write_file
+from tools.notes import update_notes, read_notes, add_chat_summary
 from memory.memory import save_history, load_history
 from langgraph.types import Send
 import time
 from langchain_openai import ChatOpenAI
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-TOOLS = [web_search, calculator, get_current_time, read_file, write_file]
+TOOLS = [web_search, calculator, get_current_time, read_file, write_file, update_notes, read_notes, add_chat_summary]
 AGENT_TIMEOUT_SECONDS = 60
 
 llm = ChatAnthropic(
@@ -185,7 +186,12 @@ def run_agent(user_input: str) -> str:
 
     initial_state = {
         "messages": [
-            SystemMessage(content="You are Jarvis, a helpful personal AI assistant."),
+            SystemMessage(content="""You are Jarvis, a helpful personal AI assistant.
+You have a notes system to remember things about the user across conversations.
+- Before answering personal questions, use read_notes to check what you know
+- When you learn something new about the user, use update_notes to save it
+- At the end of conversations, use add_chat_summary to log what was discussed
+Build your understanding of the user over time."""),
             *history,
             HumanMessage(content=user_input)
         ],

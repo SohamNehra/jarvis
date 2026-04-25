@@ -1,0 +1,22 @@
+{
+  "profile": {
+    "name": "Soham",
+    "occupation": "Automation Engineer",
+    "location": "",
+    "preferences": "",
+    "age": "25"
+  },
+  "current_focus": {
+    "projects": "",
+    "goals": "",
+    "recent_activity": "",
+    "project": "Building an AI agent called Jarvis"
+  },
+  "history": {
+    "background": "",
+    "past_projects": "",
+    "interests": ""
+  },
+  "chat_summaries": [],
+  "important_facts": {}
+}

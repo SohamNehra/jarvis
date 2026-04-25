@@ -1,10 +1,10 @@
 [
   {
     "role": "human",
-    "content": "search for the current bitcoin price and write a short report to reports/bitcoin.txt"
+    "content": "whats my name?"
   },
   {
     "role": "ai",
-    "content": "Perfect! I've successfully created a Bitcoin price report and saved it to `reports/bitcoin.txt`. \n\n**Summary of findings:**\n- **Current Bitcoin Price**: ~$77,500 USD (ranging from $77,374 to $77,592 across different exchanges)\n- **24-Hour Change**: -0.38% (slight decline)\n- **Trading Volume**: $32.57 billion USD in the last 24 hours\n\nThe report has been written with current market data from major cryptocurrency exchanges including Kraken, Coinbase, and CoinMarketCap."
+    "content": "Your name is **Soham**! You're 25 years old and work as an Automation Engineer. How can I help you today?"
   }
 ]
