@@ -7,13 +7,14 @@ from config import ANTHROPIC_API_KEY, LOOP_CHECK_MODEL, MODEL_NAME, OPENAI_API_K
 from tools.web_search import web_search
 from tools.calculator import calculator
 from tools.time_tool import get_current_time
+from tools.file_ops import read_file, write_file
 from memory.memory import save_history, load_history
 from langgraph.types import Send
 import time
 from langchain_openai import ChatOpenAI
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-TOOLS = [web_search, calculator, get_current_time]
+TOOLS = [web_search, calculator, get_current_time, read_file, write_file]
 AGENT_TIMEOUT_SECONDS = 60
 
 llm = ChatAnthropic(
@@ -116,7 +117,6 @@ def route_tools_node(state: AgentState) -> AgentState:
     return {}
 
 def graceful_end_node(state: AgentState) -> AgentState:
-    # step 1: LLM summarizes situation and decides what to ask
     assessment = llm.invoke(
         state["messages"] + [HumanMessage(content="""
         You are stuck or have hit a limit. Do the following:
@@ -132,17 +132,21 @@ def graceful_end_node(state: AgentState) -> AgentState:
     
     print(f"\nJarvis: {assessment.content}\n")
     
-    # step 2: wait for human input
     user_response = input("You: ").strip()
+    
+    # handle exit inside graceful node
+    if user_response.lower() == "exit":
+        print("Jarvis: Shutting down. See you next time.")
+        import sys
+        sys.exit(0)
     
     if not user_response:
         user_response = "Please summarize what you found and stop."
     
-    # step 3: add human response to messages and continue
     return {
         "messages": [assessment, HumanMessage(content=user_response)],
-        "iteration_count": 0,  # reset counter - fresh start with new guidance
-        "tool_call_history": []  # reset tool history too
+        "iteration_count": 0,
+        "tool_call_history": []
     }
 
 # --- Build the graph ---
