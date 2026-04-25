@@ -3,6 +3,7 @@ import itertools
 import sys
 from config import DEBUG
 from agent.core import run_agent
+import argparse
 
 def loading_spinner(stop_event):
     spinner = itertools.cycle(['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'])
@@ -14,14 +15,18 @@ def loading_spinner(stop_event):
     sys.stdout.flush()
 
 def main():
-    print("Jarvis is online. Type 'exit' to quit.\n")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--chat', default='default', help='chat session name')
+    parser.add_argument('--project', default=None, help='project name')
+    args = parser.parse_args()
+    
+    chat_info = f"[project: {args.project} | chat: {args.chat}]" if args.project else f"[chat: {args.chat}]"
+    print(f"Jarvis is online. {chat_info} Type 'exit' to quit.\n")
     
     while True:
         user_input = input("You: ").strip()
-        
         if not user_input:
             continue
-        
         if user_input.lower() == "exit":
             print("Jarvis: Shutting down. See you next time.")
             break
@@ -31,7 +36,7 @@ def main():
             spinner_thread = threading.Thread(target=loading_spinner, args=(stop_event,))
             spinner_thread.start()
 
-        response = run_agent(user_input)
+        response = run_agent(user_input, args.chat, args.project)
 
         if not DEBUG:
             stop_event.set()

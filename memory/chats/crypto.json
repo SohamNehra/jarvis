@@ -1,0 +1,10 @@
+[
+  {
+    "role": "human",
+    "content": "Hi jarvis what is bitcoin"
+  },
+  {
+    "role": "ai",
+    "content": "## What is Bitcoin?\n\n**Bitcoin** is the world's first and largest decentralized digital currency. Here are the key things to know about it:\n\n### Basic Definition\n- Bitcoin (BTC) is **digital money** that enables secure peer-to-peer transactions over the internet\n- It's not controlled by any government, bank, or central authority\u2014it's decentralized\n\n### Key Features\n- **Limited Supply**: There will only ever be 21 million bitcoins in existence\n- **Blockchain Technology**: All bitcoin transactions are recorded on a virtual ledger called the blockchain, which makes transactions immutable (permanent and unchangeable once verified)\n- **Security**: Bitcoin uses cryptographic technology to secure transactions and verify ownership\n\n### How It Works\n- Transactions are verified by a network of \"miners\" who validate that users have the bitcoins they're trying to spend\n- Once a transaction is verified and added to the blockchain, it cannot be reversed\n- Users access and control their bitcoin using public and private keys\n\n### Uses\n- **Payment**: Send and receive money peer-to-peer without intermediaries\n- **Store of Value**: Hold bitcoin as an investment or store of wealth\n- **Investment**: Buy and trade bitcoin for potential financial gain\n\n### How to Get Bitcoin\nThe easiest way is to purchase it through online exchanges like Coinbase, where you can buy, sell, send, and receive bitcoin.\n\nIs there anything specific about Bitcoin you'd like to know more about?"
+  }
+]

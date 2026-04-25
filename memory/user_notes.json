@@ -2,9 +2,10 @@
   "profile": {
     "name": "Soham",
     "occupation": "Automation Engineer",
-    "location": "",
+    "location": "Jaipur",
     "preferences": "",
-    "age": "25"
+    "age": "25",
+    "version": "Jarvis v1"
   },
   "current_focus": {
     "projects": "",

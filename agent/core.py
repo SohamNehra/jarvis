@@ -8,15 +8,15 @@ from tools.web_search import web_search
 from tools.calculator import calculator
 from tools.time_tool import get_current_time
 from tools.file_ops import read_file, write_file
-from tools.notes import update_notes, read_notes, add_chat_summary
-from memory.memory import save_history, load_history
+from tools.notes import read_project_notes, set_project, update_notes, read_notes, add_chat_summary, update_project_notes
+from memory.memory import load_project_notes, save_history, load_history
 from langgraph.types import Send
 import time
 from langchain_openai import ChatOpenAI
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from tools.code_executor import run_python_code
 
-TOOLS = [web_search, calculator, get_current_time, read_file, write_file, update_notes, read_notes, add_chat_summary, run_python_code]
+TOOLS = [web_search, calculator, get_current_time, read_file, write_file, update_notes, read_notes, add_chat_summary, run_python_code, update_project_notes, read_project_notes]
 AGENT_TIMEOUT_SECONDS = 60
 
 llm = ChatAnthropic(
@@ -182,17 +182,26 @@ def build_graph():
 
 jarvis = build_graph()
 
-def run_agent(user_input: str) -> str:
-    history = load_history()
+def run_agent(user_input: str, chat_name: str = "default", project_name: str = None) -> str:
+    history = load_history(chat_name, project_name)
+    set_project(project_name)
+    # build system prompt with project context if available
+    system_content = "You are Jarvis, a helpful personal AI assistant.\n"
+    system_content += """
+    Notes system:
+    - update_notes / read_notes → YOUR personal profile (name, preferences, background)
+    - update_project_notes / read_project_notes → current PROJECT context (goals, decisions, technical details)
+    - add_chat_summary → log what was discussed
+    Always use project notes for project-specific information when in a project."""
+    
+    if project_name:
+        project_notes = load_project_notes(project_name)
+        if project_notes:
+            system_content += f"\n\nProject context ({project_name}):\n{project_notes}"
 
     initial_state = {
         "messages": [
-            SystemMessage(content="""You are Jarvis, a helpful personal AI assistant.
-You have a notes system to remember things about the user across conversations.
-- Before answering personal questions, use read_notes to check what you know
-- When you learn something new about the user, use update_notes to save it
-- At the end of conversations, use add_chat_summary to log what was discussed
-Build your understanding of the user over time."""),
+            SystemMessage(content=system_content),
             *history,
             HumanMessage(content=user_input)
         ],
@@ -212,5 +221,5 @@ Build your understanding of the user over time."""),
             return "I ran out of time completing that task. Please try a simpler request or break it into smaller parts."
 
     final_message = final_state["messages"][-1]
-    save_history(final_state["messages"])
+    save_history(final_state["messages"], chat_name, project_name)
     return final_message.content

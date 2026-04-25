@@ -69,3 +69,45 @@ def add_chat_summary(summary: str) -> str:
     notes["chat_summaries"].append(summary)
     _save(notes)
     return "Chat summary saved."
+
+PROJECT_NOTES_FILE = None  # gets set at runtime
+
+def set_project(project_name: str):
+    """called by run_agent to set current project context"""
+    global PROJECT_NOTES_FILE
+    if project_name:
+        path = f"memory/projects/{project_name}/project_notes.json"
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        PROJECT_NOTES_FILE = path
+    else:
+        PROJECT_NOTES_FILE = None
+
+@tool
+def update_project_notes(key: str, value: str) -> str:
+    """Update notes specific to the current project.
+    Use this for project-specific context, goals, decisions, and technical details.
+    Different from user notes which store personal profile information."""
+    if not PROJECT_NOTES_FILE:
+        return "No active project. Use update_notes for general information."
+    
+    if os.path.exists(PROJECT_NOTES_FILE) and os.path.getsize(PROJECT_NOTES_FILE) > 0:
+        with open(PROJECT_NOTES_FILE, "r") as f:
+            notes = json.load(f)
+    else:
+        notes = {}
+    
+    notes[key] = value
+    with open(PROJECT_NOTES_FILE, "w") as f:
+        json.dump(notes, f, indent=2)
+    return f"Saved to project notes: {key}"
+
+@tool
+def read_project_notes() -> str:
+    """Read all notes for the current project.
+    Use this when working on project-specific tasks."""
+    if not PROJECT_NOTES_FILE:
+        return "No active project."
+    if not os.path.exists(PROJECT_NOTES_FILE) or os.path.getsize(PROJECT_NOTES_FILE) == 0:
+        return "No project notes yet."
+    with open(PROJECT_NOTES_FILE, "r") as f:
+        return json.dumps(json.load(f), indent=2)
