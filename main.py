@@ -25,7 +25,7 @@ def route_request(user_input: str, chat_name: str = "default", project_name: str
     router_llm = ChatOpenAI(model=LOOP_CHECK_MODEL, temperature=0, api_key=OPENAI_API_KEY)
     
     response = router_llm.invoke([
-       SystemMessage(content="""Decide if this task needs multiple specialist agents or a single agent.
+        SystemMessage(content="""Decide if this task needs multiple specialist agents or a single agent.
 ONLY use multi-agent when ALL of these are true:
 - Task has 3 or more clearly distinct phases
 - Phases require genuinely different expertise (research vs coding vs writing)
@@ -33,7 +33,6 @@ ONLY use multi-agent when ALL of these are true:
 
 For everything else reply 'single'.
 Reply with ONLY 'multi' or 'single'.""")
-        HumanMessage(content=user_input)
     ])
     
     if response.content.strip().lower() == "multi":
