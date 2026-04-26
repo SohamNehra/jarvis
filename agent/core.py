@@ -15,6 +15,7 @@ import time
 from langchain_openai import ChatOpenAI
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from tools.code_executor import run_python_code
+import json
 
 TOOLS = [web_search, calculator, get_current_time, read_file, write_file, update_notes, read_notes, add_chat_summary, run_python_code, update_project_notes, read_project_notes]
 AGENT_TIMEOUT_SECONDS = 60
