@@ -18,7 +18,7 @@ from tools.code_executor import run_python_code
 import json
 
 TOOLS = [web_search, calculator, get_current_time, read_file, write_file, update_notes, read_notes, add_chat_summary, run_python_code, update_project_notes, read_project_notes]
-AGENT_TIMEOUT_SECONDS = 60
+AGENT_TIMEOUT_SECONDS = 300
 
 llm = ChatAnthropic(
     model=MODEL_NAME,
@@ -218,8 +218,10 @@ def run_agent(user_input: str, chat_name: str = "default", project_name: str = N
         try:
             final_state = future.result(timeout=AGENT_TIMEOUT_SECONDS)
         except FuturesTimeoutError:
-            print(f">> timeout: agent exceeded {AGENT_TIMEOUT_SECONDS}s")
-            return "I ran out of time completing that task. Please try a simpler request or break it into smaller parts."
+            print(f">> timeout: single agent exceeded {AGENT_TIMEOUT_SECONDS}s, escalating to supervisor...")
+            # import here to avoid circular imports
+            from agent.supervisor import run_supervisor
+            return run_supervisor(user_input)
 
     final_message = final_state["messages"][-1]
     save_history(final_state["messages"], chat_name, project_name)

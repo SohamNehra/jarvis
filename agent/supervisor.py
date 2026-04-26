@@ -57,7 +57,12 @@ def create_task_plan(user_input: str) -> list:
         - assign only tools the agent genuinely needs
         - system_prompt should be focused and specific
         - depends_on contains task ids that must complete first
-        - independent tasks have empty depends_on []"""),
+        - independent tasks have empty depends_on []
+        File storage rules:
+        - reports and documents → reports/
+        - python scripts and code files → workspace/scripts/
+        - data files → workspace/data/
+        - never save files to root directory"""),
         HumanMessage(content=user_input)
     ])
 
@@ -73,29 +78,26 @@ def create_task_plan(user_input: str) -> list:
 def execute_plan(tasks: list) -> dict:
     completed = {}
     pending = {t["id"]: t for t in tasks}
-
-    while pending:
-        ready = [
-            t for t in pending.values()
-            if all(dep in completed for dep in t["depends_on"])
-        ]
-
-        if not ready:
-            break
-
-        with ThreadPoolExecutor(max_workers=len(ready)) as executor:
-            futures = {}
-            for t in ready:
-                # dynamically create agent with assigned tools and prompt
-                agent_tools = [TOOL_REGISTRY[name] for name in t["tools"] if name in TOOL_REGISTRY]
-                agent = create_agent(
-                    tools=agent_tools,
-                    system_prompt=t["system_prompt"]
-                )
-                futures[executor.submit(agent, t["input"])] = t
-
-            for future in as_completed(futures):
-                task = futures[future]
+    futures = {}
+    
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        
+        def submit_task(t):
+            agent_tools = [TOOL_REGISTRY[name] for name in t["tools"] if name in TOOL_REGISTRY]
+            agent = create_agent(tools=agent_tools, system_prompt=t["system_prompt"])
+            future = executor.submit(agent, t["input"])
+            futures[future] = t
+            print(f">> spawning agent [{t['name']}] task {t['id']}")
+        
+        # submit all tasks with no dependencies immediately
+        for t in pending.values():
+            if not t["depends_on"]:
+                submit_task(t)
+        
+        # as each task completes, immediately check and submit newly unblocked tasks
+        while futures:
+            for future in as_completed(list(futures.keys())):
+                task = futures.pop(future)
                 result = future.result()
                 completed[task["id"]] = {
                     "name": task["name"],
@@ -104,7 +106,18 @@ def execute_plan(tasks: list) -> dict:
                 }
                 del pending[task["id"]]
                 print(f">> agent [{task['name']}] completed task {task['id']}")
-
+                
+                # immediately check if any pending tasks are now unblocked
+                newly_ready = [
+                    t for t in pending.values()
+                    if t["id"] not in [f_task["id"] for f_task in futures.values()]
+                    and all(dep in completed for dep in t["depends_on"])
+                ]
+                for t in newly_ready:
+                    submit_task(t)
+                
+                break  # restart loop with updated futures dict
+    
     return completed
 
 def synthesize_results(user_input: str, completed: dict) -> str:

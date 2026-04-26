@@ -38,5 +38,13 @@
   {
     "role": "ai",
     "content": "Perfect! I've completed your comprehensive cryptocurrency investment analysis. Here's what I delivered:\n\n## Summary of Analysis:\n\n**Top 3 Cryptocurrencies by Market Cap:**\n1. **Bitcoin (BTC)** - $44,167.33 \u2192 $78,061.00 (+76.74% return)\n2. **Ethereum (ETH)** - $2,352.33 \u2192 $2,348.02 (-0.18% return)\n3. **BNB (BNB)** - $316.20 \u2192 $640.00 (+102.40% return)\n\n**Portfolio Results ($1,000 invested in each):**\n- Total Investment: $3,000.00\n- Current Value: $4,789.60\n- **Total Return: +59.65% ($1,789.60 profit)**\n\n**Key Findings:**\n- \ud83c\udfc6 **Best Performer:** BNB with +102.40% return\n- \ud83d\udcc8 **Strong Performer:** Bitcoin with +76.74% return\n- \ud83d\ude10 **Stable Asset:** Ethereum with -0.18% (near breakeven)\n- \ud83d\udcb0 **Portfolio Gain:** $1,789.60 in absolute returns\n\nThe formal investment report has been written to **reports/crypto_investment.txt** with:\n- Executive summary\n- Detailed analysis for each cryptocurrency\n- Portfolio performance metrics\n- Risk assessment\n- Investment recommendations for different investor types\n- Comprehensive conclusions and disclaimers\n\nThe report is ready for your review!"
+  },
+  {
+    "role": "human",
+    "content": "hi"
+  },
+  {
+    "role": "ai",
+    "content": "Hey there! \ud83d\udc4b How can I help you today?"
   }
 ]

@@ -16,6 +16,9 @@ def loading_spinner(stop_event):
     sys.stdout.flush()
 
 def route_request(user_input: str, chat_name: str = "default", project_name: str = None) -> str:
+    if any(phrase in user_input.lower() for phrase in ["use multi agent", "multi-agent", "use multiple agents"]):
+        print(">> user requested multi-agent supervisor")
+        return run_supervisor(user_input)
     # use LLM to decide if this needs multi-agent
     from langchain_anthropic import ChatAnthropic
     from langchain_core.messages import HumanMessage, SystemMessage
