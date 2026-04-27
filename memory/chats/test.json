@@ -1,0 +1,10 @@
+[
+  {
+    "role": "human",
+    "content": "what time is it?"
+  },
+  {
+    "role": "ai",
+    "content": "It's currently **10:37 PM** on **April 27, 2026**."
+  }
+]
