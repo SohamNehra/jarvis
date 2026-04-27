@@ -1,8 +1,9 @@
 import json
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
-from config import ANTHROPIC_API_KEY, MODEL_NAME, TEMPERATURE
+from config import ANTHROPIC_API_KEY, MODEL_NAME, TEMPERATURE, MAX_PARALLEL_AGENTS
 from agent.agent_factory import create_agent
 from tools.web_search import web_search
 from tools.calculator import calculator
@@ -17,7 +18,6 @@ supervisor_llm = ChatAnthropic(
     api_key=ANTHROPIC_API_KEY
 )
 
-# master registry - all tools available for dynamic assignment
 TOOL_REGISTRY = {
     "web_search": web_search,
     "calculator": calculator,
@@ -32,12 +32,25 @@ TOOL_REGISTRY = {
     "add_chat_summary": add_chat_summary,
 }
 
+# rate limiter - max 3 simultaneous API calls
+api_semaphore = threading.Semaphore(MAX_PARALLEL_AGENTS)
+
+def rate_limited_run(agent, task_input: str) -> str:
+    with api_semaphore:
+        return agent(task_input)
+
 def create_task_plan(user_input: str) -> list:
     response = supervisor_llm.invoke([
         SystemMessage(content=f"""You are a task planning supervisor.
         Break the user request into subtasks. For each subtask create a focused agent.
         
         Available tools: {list(TOOL_REGISTRY.keys())}
+        
+        File storage rules:
+        - reports and documents → reports/
+        - python scripts and code files → workspace/scripts/
+        - data files → workspace/data/
+        - never save files to root directory
         
         Return ONLY valid JSON, no explanation, no markdown:
         {{
@@ -57,12 +70,7 @@ def create_task_plan(user_input: str) -> list:
         - assign only tools the agent genuinely needs
         - system_prompt should be focused and specific
         - depends_on contains task ids that must complete first
-        - independent tasks have empty depends_on []
-        File storage rules:
-        - reports and documents → reports/
-        - python scripts and code files → workspace/scripts/
-        - data files → workspace/data/
-        - never save files to root directory"""),
+        - independent tasks have empty depends_on []"""),
         HumanMessage(content=user_input)
     ])
 
@@ -79,22 +87,22 @@ def execute_plan(tasks: list) -> dict:
     completed = {}
     pending = {t["id"]: t for t in tasks}
     futures = {}
-    
+
     with ThreadPoolExecutor(max_workers=6) as executor:
-        
+
         def submit_task(t):
             agent_tools = [TOOL_REGISTRY[name] for name in t["tools"] if name in TOOL_REGISTRY]
             agent = create_agent(tools=agent_tools, system_prompt=t["system_prompt"])
-            future = executor.submit(agent, t["input"])
+            future = executor.submit(rate_limited_run, agent, t["input"])
             futures[future] = t
             print(f">> spawning agent [{t['name']}] task {t['id']}")
-        
-        # submit all tasks with no dependencies immediately
+
+        # submit all independent tasks immediately
         for t in pending.values():
             if not t["depends_on"]:
                 submit_task(t)
-        
-        # as each task completes, immediately check and submit newly unblocked tasks
+
+        # streaming DAG - trigger dependent tasks as soon as dependencies complete
         while futures:
             for future in as_completed(list(futures.keys())):
                 task = futures.pop(future)
@@ -106,8 +114,8 @@ def execute_plan(tasks: list) -> dict:
                 }
                 del pending[task["id"]]
                 print(f">> agent [{task['name']}] completed task {task['id']}")
-                
-                # immediately check if any pending tasks are now unblocked
+
+                # immediately check newly unblocked tasks
                 newly_ready = [
                     t for t in pending.values()
                     if t["id"] not in [f_task["id"] for f_task in futures.values()]
@@ -115,9 +123,9 @@ def execute_plan(tasks: list) -> dict:
                 ]
                 for t in newly_ready:
                     submit_task(t)
-                
-                break  # restart loop with updated futures dict
-    
+
+                break  # restart as_completed with updated futures
+
     return completed
 
 def synthesize_results(user_input: str, completed: dict) -> str:
