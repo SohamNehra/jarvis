@@ -33,3 +33,16 @@ class UpdateNotesRequest(BaseModel):
     section: str
     key: str
     value: str
+
+class SettingsUpdate(BaseModel):
+    settings: dict
+
+class ChatRenameRequest(BaseModel):
+    old_name: str
+    new_name: str
+    project_name: Optional[str] = None
+
+class ChatMoveRequest(BaseModel):
+    chat_name: str
+    from_project: Optional[str] = None
+    to_project: Optional[str] = None

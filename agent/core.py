@@ -183,6 +183,101 @@ def build_graph():
 
 jarvis = build_graph()
 
+
+def should_continue_api(state: AgentState) -> str:
+    last = state["messages"][-1]
+    if getattr(last, "tool_calls", None):
+        return "tools"
+    if state["iteration_count"] >= 10:
+        return "end"
+    tool_history = state.get("tool_call_history", [])
+    if len(tool_history) >= 4 and check_loop(tool_history[-4:]):
+        return "end"
+    return "end"
+
+
+def build_api_graph():
+    graph = StateGraph(AgentState)
+    graph.add_node("agent", agent_node)
+    graph.add_node("execute_tool", execute_single_tool)
+    graph.add_node("route_tools", route_tools_node)
+    graph.set_entry_point("agent")
+    graph.add_conditional_edges("agent", should_continue_api, {"tools": "route_tools", "end": END})
+    graph.add_conditional_edges("route_tools", route_tool_calls, ["execute_tool"])
+    graph.add_edge("execute_tool", "agent")
+    return graph.compile()
+
+
+jarvis_api = build_api_graph()
+
+
+def run_agent_streaming(user_input: str, chat_name: str, project_name, event_queue) -> None:
+    """Runs the agent via jarvis_api.stream() and puts typed events into event_queue.
+    Sentinel None is always the last item. event types: tool_start, tool_end, response, error."""
+    history = load_history(chat_name, project_name)
+    set_project(project_name)
+
+    system_content = "You are Jarvis, a helpful personal AI assistant.\n"
+    system_content += """
+    Notes system:
+    - update_notes / read_notes → YOUR personal profile (name, preferences, background)
+    - update_project_notes / read_project_notes → current PROJECT context (goals, decisions, technical details)
+    - add_chat_summary → log what was discussed
+    Always use project notes for project-specific information when in a project."""
+
+    if project_name:
+        project_notes = load_project_notes(project_name)
+        if project_notes:
+            system_content += f"\n\nProject context ({project_name}):\n{project_notes}"
+
+    initial_state = {
+        "messages": [SystemMessage(content=system_content), *history, HumanMessage(content=user_input)],
+        "iteration_count": 0,
+        "tool_call_history": [],
+    }
+
+    all_messages = list(initial_state["messages"])
+    pending_starts: dict = {}  # tool_call_id -> start_time
+
+    try:
+        for update in jarvis_api.stream(initial_state, stream_mode="updates"):
+            for node_name, node_output in update.items():
+                new_msgs = node_output.get("messages", [])
+                all_messages.extend(new_msgs)
+
+                if node_name == "agent":
+                    for msg in new_msgs:
+                        for tc in getattr(msg, "tool_calls", []):
+                            pending_starts[tc["id"]] = time.time()
+                            event_queue.put({"type": "tool_start", "tool": tc["name"], "args": tc["args"]})
+
+                elif node_name == "execute_tool":
+                    history_new = node_output.get("tool_call_history", [])
+                    tool_name = history_new[0]["name"] if history_new else "unknown"
+                    for msg in new_msgs:
+                        tc_id = getattr(msg, "tool_call_id", None)
+                        if tc_id:
+                            start = pending_starts.pop(tc_id, None)
+                            took = round(time.time() - start, 2) if start else 0
+                            event_queue.put({"type": "tool_end", "tool": tool_name, "took": took})
+
+        final_response = ""
+        for msg in reversed(all_messages):
+            content = getattr(msg, "content", "")
+            if isinstance(content, str) and content.strip() and not getattr(msg, "tool_calls", None):
+                final_response = content
+                break
+
+        save_history(all_messages, chat_name, project_name)
+        event_queue.put({"type": "response", "content": final_response})
+
+    except Exception as e:
+        event_queue.put({"type": "error", "message": str(e)})
+
+    finally:
+        event_queue.put(None)
+
+
 def run_agent(user_input: str, chat_name: str = "default", project_name: str = None) -> str:
     history = load_history(chat_name, project_name)
     set_project(project_name)

@@ -1,0 +1,10 @@
+[
+  {
+    "role": "human",
+    "content": "hi jarvis testring the tools, how many you have?"
+  },
+  {
+    "role": "ai",
+    "content": "Hi! I'm Jarvis, your personal AI assistant. Let me tell you about the tools I have available:\n\nI have **9 tools** at my disposal:\n\n1. **web_search** - Search the web for current information on any topic\n2. **calculator** - Evaluate mathematical expressions and perform calculations\n3. **get_current_time** - Get the current date and time\n4. **read_file** - Read text files from the filesystem\n5. **write_file** - Write content to files (creates directories as needed)\n6. **update_notes** - Update your personal profile information (preferences, background, etc.)\n7. **read_notes** - Read your personal profile notes\n8. **add_chat_summary** - Log summaries of our conversations\n9. **run_python_code** - Write and execute Python code for data analysis, file processing, charts, etc.\n10. **update_project_notes** - Update project-specific context and technical details\n11. **read_project_notes** - Read project-specific notes\n\nActually, that's **11 tools** total! I can use these to help you with a wide variety of tasks - from quick calculations and web searches to file management, personal organization, and even running Python code for more complex tasks.\n\nIs there anything specific you'd like to test or any task you'd like help with?"
+  }
+]

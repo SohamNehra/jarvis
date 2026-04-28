@@ -1,0 +1,18 @@
+[
+  {
+    "role": "human",
+    "content": "Hi jarvis"
+  },
+  {
+    "role": "ai",
+    "content": "Hello! \ud83d\udc4b I'm Jarvis, your personal AI assistant. I'm here to help you with a wide variety of tasks\u2014whether that's answering questions, doing research, writing, coding, analyzing data, managing notes, or anything else you need.\n\nHow can I assist you today?"
+  },
+  {
+    "role": "human",
+    "content": "lets start with whats the weather in jaipur"
+  },
+  {
+    "role": "ai",
+    "content": "Here's the current weather in **Jaipur, Rajasthan, India**:\n\n**Current Conditions (as of 10:15 AM):**\n- \ud83c\udf21\ufe0f **Temperature:** 34.2\u00b0C (93.6\u00b0F)\n- **Feels Like:** 32.2\u00b0C (90\u00b0F)\n- \ud83c\udf2b\ufe0f **Condition:** Mist\n- \ud83d\udca8 **Wind:** 18.7 km/h (11.6 mph) from the West\n- \ud83d\udca7 **Humidity:** 26%\n- \ud83d\udc41\ufe0f **Visibility:** 2.5 km\n- \u2600\ufe0f **UV Index:** 6 (High)\n\n**Today's Forecast:**\n- **High:** 42\u00b0C\n- **Low:** 29\u00b0C\n- Sunrise: 5:51 AM | Sunset: 6:57 PM\n\nIt's quite hot and dry in Jaipur today with mist in the morning. The humidity is relatively low at 26%, but the heat index is around 36\u00b0C, so it will feel quite warm. Stay hydrated! \u2600\ufe0f"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "role": "human",
+    "content": "hello jarvis whats the time"
+  },
+  {
+    "role": "ai",
+    "content": "Hello! The current time is **4:07 AM** on **April 28, 2026**. \n\nThat's quite early in the morning! Is there anything I can help you with?"
+  }
+]

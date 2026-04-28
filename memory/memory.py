@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime, timezone
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_anthropic import ChatAnthropic
 from config import ANTHROPIC_API_KEY, MODEL_NAME
@@ -31,6 +32,22 @@ def get_project_notes_path(project_name: str) -> str:
 
 def get_global_notes_path() -> str:
     return "memory/user_notes.json"
+
+def _meta_path(chat_path: str) -> str:
+    return chat_path[:-5] + ".meta.json"
+
+def _update_meta(chat_path: str, message_count: int):
+    path = _meta_path(chat_path)
+    now = datetime.now(timezone.utc).isoformat()
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        meta["updated_at"] = now
+        meta["message_count"] = message_count
+    else:
+        meta = {"created_at": now, "updated_at": now, "message_count": message_count}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2)
 
 # --- Serialization helpers ---
 
@@ -107,6 +124,7 @@ def save_history(messages: list, chat_name: str = "default", project_name: str =
         serialized = [summary_entry] + recent
 
     _save_json(path, serialized)
+    _update_meta(path, len(serialized))
 
 def load_history(chat_name: str = "default", project_name: str = None) -> list:
     """load chat history from disk"""
