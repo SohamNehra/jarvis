@@ -1,0 +1,34 @@
+[
+  {
+    "role": "human",
+    "content": "hey jarvis"
+  },
+  {
+    "role": "ai",
+    "content": "Hey there! \ud83d\udc4b How's it going? What can I help you with today?"
+  },
+  {
+    "role": "human",
+    "content": "hi nbud"
+  },
+  {
+    "role": "ai",
+    "content": "Hey! \ud83d\udc4b What's up? How can I assist you today?"
+  },
+  {
+    "role": "human",
+    "content": "what is the time?"
+  },
+  {
+    "role": "ai",
+    "content": "It's currently **11:47 PM** on **April 28, 2026**. \n\nIs there anything else you'd like to know?"
+  },
+  {
+    "role": "human",
+    "content": "whats the bitcoin current price?"
+  },
+  {
+    "role": "ai",
+    "content": "Bitcoin's current price is around **$76,000 - $78,000 USD**, depending on the exchange:\n\n- **Coinbase**: $78,014.79\n- **Crypto.com**: $75,997.32\n- **Kraken**: $76,133.00\n\nBitcoin is down slightly in the last 24 hours (around -0.92% to -2.06% depending on the source). Prices vary slightly across different exchanges due to market dynamics.\n\nWant to know anything else about crypto or Bitcoin?"
+  }
+]

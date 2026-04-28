@@ -1,6 +1,5 @@
-from fastapi import APIRouter, HTTPException
-from fastapi import Body
-from api.models import NotesResponse, UpdateNotesRequest, SettingsUpdate
+from fastapi import APIRouter, HTTPException, Body
+from api.models import NotesResponse, UpdateNotesRequest
 import json
 import os
 
@@ -81,10 +80,11 @@ async def get_settings():
 
 
 @router.put("/settings")
-async def update_settings(request: SettingsUpdate):
-    """write updates to .jarvis_config.json and reload module-level config vars"""
+async def update_settings(body: dict = Body(...)):
+    """write updates to .jarvis_config.json; accepts flat keys or {"settings": {...}}"""
     from config import write_config
-    write_config(request.settings)
+    settings = body.get("settings", body) if isinstance(body.get("settings"), dict) else body
+    write_config(settings)
     return {"message": "settings updated"}
 
 

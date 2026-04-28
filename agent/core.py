@@ -1,5 +1,5 @@
 from langchain_anthropic import ChatAnthropic 
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage , AIMessage
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated
 import operator
@@ -242,6 +242,8 @@ def run_agent_streaming(user_input: str, chat_name: str, project_name, event_que
     try:
         for update in jarvis_api.stream(initial_state, stream_mode="updates"):
             for node_name, node_output in update.items():
+                if node_output is None:
+                    continue
                 new_msgs = node_output.get("messages", [])
                 all_messages.extend(new_msgs)
 
@@ -263,15 +265,32 @@ def run_agent_streaming(user_input: str, chat_name: str, project_name, event_que
 
         final_response = ""
         for msg in reversed(all_messages):
+            if not isinstance(msg, AIMessage):
+                continue
+            if getattr(msg, "tool_calls", None):
+                continue
             content = getattr(msg, "content", "")
-            if isinstance(content, str) and content.strip() and not getattr(msg, "tool_calls", None):
+            if isinstance(content, list):
+                text_parts = [
+                    b.get("text", "") for b in content 
+                    if isinstance(b, dict) and b.get("type") == "text"
+                ]
+                content = "".join(text_parts)
+            if content.strip():
                 final_response = content
                 break
 
         save_history(all_messages, chat_name, project_name)
+        print(f"DEBUG final_response: '{final_response[:100] if final_response else 'EMPTY'}'")
+        print(f"DEBUG all_messages count: {len(all_messages)}")
+        for i, msg in enumerate(reversed(all_messages[:5])):
+            print(f"DEBUG msg {i}: type={type(msg).__name__} content_type={type(getattr(msg, 'content', '')).__name__} tool_calls={bool(getattr(msg, 'tool_calls', None))}")
         event_queue.put({"type": "response", "content": final_response})
 
     except Exception as e:
+        print(f"DEBUG EXCEPTION: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         event_queue.put({"type": "error", "message": str(e)})
 
     finally:

@@ -6,5 +6,21 @@
   {
     "role": "ai",
     "content": "It's currently **10:37 PM** on **April 27, 2026**."
+  },
+  {
+    "role": "human",
+    "content": "hey bud"
+  },
+  {
+    "role": "ai",
+    "content": "Hey there! \ud83d\udc4b How's it going? What can I help you with today?"
+  },
+  {
+    "role": "human",
+    "content": "what time it is man?"
+  },
+  {
+    "role": "ai",
+    "content": "It's currently **10:37 PM** on **April 27, 2026**.\n\n(Same as a moment ago\u2014time moves pretty quickly when we're chatting! \ud83d\ude04)"
   }
 ]

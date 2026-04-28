@@ -41,13 +41,13 @@ async def chat(request: ChatRequest):
     response = route_request(
         request.message,
         request.chat_name,
-        request.project_name,
+        request.resolved_project_name,
         request.use_multi_agent
     )
     return ChatResponse(
         response=response,
         chat_name=request.chat_name,
-        project_name=request.project_name
+        project_name=request.resolved_project_name
     )
 
 
@@ -59,52 +59,61 @@ async def chat_stream(request: ChatRequest):
 
     async def generate():
         loop = asyncio.get_event_loop()
+        sent_done = False
 
-        if request.use_multi_agent:
-            response = await loop.run_in_executor(None, run_supervisor, request.message)
-            for word in response.split(" "):
-                yield f"data: {json.dumps({'token': word + ' ', 'done': False})}\n\n"
-                await asyncio.sleep(0.02)
+        try:
+            if request.use_multi_agent:
+                response = await loop.run_in_executor(None, run_supervisor, request.message)
+                for word in response.split(" "):
+                    yield f"data: {json.dumps({'token': word + ' ', 'done': False})}\n\n"
+                    await asyncio.sleep(0.02)
 
-        else:
-            event_queue: _queue.Queue = _queue.Queue()
-            future = loop.run_in_executor(
-                None,
-                run_agent_streaming,
-                request.message,
-                request.chat_name,
-                request.project_name,
-                event_queue,
-            )
+            else:
+                event_queue: _queue.Queue = _queue.Queue()
+                future = loop.run_in_executor(
+                    None,
+                    run_agent_streaming,
+                    request.message,
+                    request.chat_name,
+                    request.project_name,
+                    event_queue,
+                )
 
-            done = False
-            while not done:
-                try:
-                    event = event_queue.get_nowait()
-                except _queue.Empty:
-                    await asyncio.sleep(0.05)
-                    continue
+                stream_done = False
+                while not stream_done:
+                    try:
+                        event = event_queue.get_nowait()
+                    except _queue.Empty:
+                        await asyncio.sleep(0.05)
+                        continue
 
-                if event is None:
-                    done = True
+                    if event is None:
+                        stream_done = True
 
-                elif event["type"] in ("tool_start", "tool_end"):
-                    yield f"data: {json.dumps(event)}\n\n"
+                    elif event["type"] in ("tool_start", "tool_end"):
+                        yield f"data: {json.dumps(event)}\n\n"
 
-                elif event["type"] == "response":
-                    words = event["content"].split(" ")
-                    for i, word in enumerate(words):
-                        tok = word + (" " if i < len(words) - 1 else "")
-                        yield f"data: {json.dumps({'token': tok, 'done': False})}\n\n"
-                        await asyncio.sleep(0.02)
+                    elif event["type"] == "response":
+                        words = event["content"].split(" ")
+                        for i, word in enumerate(words):
+                            tok = word + (" " if i < len(words) - 1 else "")
+                            yield f"data: {json.dumps({'token': tok, 'done': False})}\n\n"
+                            await asyncio.sleep(0.02)
 
-                elif event["type"] == "error":
-                    yield f"data: {json.dumps({'error': event['message'], 'done': True})}\n\n"
-                    done = True
+                    elif event["type"] == "error":
+                        yield f"data: {json.dumps({'error': event['message'], 'done': True})}\n\n"
+                        sent_done = True
+                        stream_done = True
 
-            await future
+                await future
 
-        yield f"data: {json.dumps({'token': '', 'done': True})}\n\n"
+        except Exception as exc:
+            if not sent_done:
+                yield f"data: {json.dumps({'error': str(exc), 'done': True})}\n\n"
+                sent_done = True
+
+        if not sent_done:
+            yield f"data: {json.dumps({'token': '', 'done': True})}\n\n"
 
     return StreamingResponse(
         generate(),
@@ -139,8 +148,8 @@ async def get_chat_history(chat_name: str = "default", project_name: str = None)
 async def rename_chat(request: ChatRenameRequest):
     """rename a chat session; also moves the .meta.json file"""
     from memory.memory import get_chat_path
-    old_path = get_chat_path(request.old_name, request.project_name)
-    new_path = get_chat_path(request.new_name, request.project_name)
+    old_path = get_chat_path(request.old_name, request.resolved_project_name)
+    new_path = get_chat_path(request.resolved_new_name, request.resolved_project_name)
     if not os.path.exists(old_path):
         raise HTTPException(status_code=404, detail="Chat not found")
     if os.path.exists(new_path):
@@ -150,7 +159,7 @@ async def rename_chat(request: ChatRenameRequest):
     new_meta = new_path[:-5] + ".meta.json"
     if os.path.exists(old_meta):
         os.rename(old_meta, new_meta)
-    return {"message": f"renamed to '{request.new_name}'"}
+    return {"message": f"renamed to '{request.resolved_new_name}'"}
 
 
 @router.post("/chat/move")
@@ -158,7 +167,7 @@ async def move_chat(request: ChatMoveRequest):
     """move a chat between global chats and a project (or between projects)"""
     from memory.memory import get_chat_path
     src = get_chat_path(request.chat_name, request.from_project)
-    dst = get_chat_path(request.chat_name, request.to_project)
+    dst = get_chat_path(request.chat_name, request.resolved_to_project)
     if not os.path.exists(src):
         raise HTTPException(status_code=404, detail="Chat not found")
     if os.path.exists(dst):
@@ -168,5 +177,5 @@ async def move_chat(request: ChatMoveRequest):
     dst_meta = dst[:-5] + ".meta.json"
     if os.path.exists(src_meta):
         os.rename(src_meta, dst_meta)
-    target = f"project '{request.to_project}'" if request.to_project else "global chats"
+    target = f"project '{request.resolved_to_project}'" if request.resolved_to_project else "global chats"
     return {"message": f"moved '{request.chat_name}' to {target}"}

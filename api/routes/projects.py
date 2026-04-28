@@ -1,5 +1,5 @@
-from fastapi import APIRouter
-from api.models import CreateProjectRequest, Project, Chat
+from fastapi import APIRouter, HTTPException
+from api.models import CreateProjectRequest, Project, Chat, ChatPatchRequest
 import os
 import json
 from datetime import datetime, timezone
@@ -91,3 +91,43 @@ async def list_chats(project_name: str = None):
 
     result.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
     return {"chats": result}
+
+
+@router.patch("/chats/{chat_name}")
+async def patch_chat(chat_name: str, request: ChatPatchRequest):
+    """rename or move a chat session"""
+    from memory.memory import get_chat_path
+
+    if request.action == "rename":
+        if not request.new_name:
+            raise HTTPException(status_code=400, detail="new_name is required for rename")
+        old_path = get_chat_path(chat_name, request.project_name)
+        new_path = get_chat_path(request.new_name, request.project_name)
+        if not os.path.exists(old_path):
+            raise HTTPException(status_code=404, detail="Chat not found")
+        if os.path.exists(new_path):
+            raise HTTPException(status_code=409, detail="A chat with that name already exists")
+        os.rename(old_path, new_path)
+        old_meta = old_path[:-5] + ".meta.json"
+        new_meta = new_path[:-5] + ".meta.json"
+        if os.path.exists(old_meta):
+            os.rename(old_meta, new_meta)
+        return {"message": f"renamed to '{request.new_name}'"}
+
+    elif request.action == "move":
+        src = get_chat_path(chat_name, request.project_name)
+        dst = get_chat_path(chat_name, request.to_project)
+        if not os.path.exists(src):
+            raise HTTPException(status_code=404, detail="Chat not found")
+        if os.path.exists(dst):
+            raise HTTPException(status_code=409, detail="A chat with that name already exists in the target")
+        os.rename(src, dst)
+        src_meta = src[:-5] + ".meta.json"
+        dst_meta = dst[:-5] + ".meta.json"
+        if os.path.exists(src_meta):
+            os.rename(src_meta, dst_meta)
+        target = f"project '{request.to_project}'" if request.to_project else "global chats"
+        return {"message": f"moved '{chat_name}' to {target}"}
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown action '{request.action}'")

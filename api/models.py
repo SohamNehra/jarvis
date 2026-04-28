@@ -46,3 +46,24 @@ class ChatMoveRequest(BaseModel):
     chat_name: str
     from_project: Optional[str] = None
     to_project: Optional[str] = None
+
+class ChatPatchRequest(BaseModel):
+    action: str
+    new_name: Optional[str] = None
+    newName: Optional[str] = None
+    to_project: Optional[str] = None
+    toProject: Optional[str] = None
+    project_name: Optional[str] = None
+    projectName: Optional[str] = None
+
+    @property
+    def resolved_new_name(self):
+        return self.new_name or self.newName
+
+    @property  
+    def resolved_to_project(self):
+        return self.to_project or self.toProject
+
+    @property
+    def resolved_project_name(self):
+        return self.project_name or self.projectName

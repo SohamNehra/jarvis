@@ -1,0 +1,26 @@
+[
+  {
+    "role": "human",
+    "content": "hi bud"
+  },
+  {
+    "role": "ai",
+    "content": "Hey there! \ud83d\udc4b How's it going? What can I help you with today?"
+  },
+  {
+    "role": "human",
+    "content": "hola jarvis"
+  },
+  {
+    "role": "ai",
+    "content": "\u00a1Hola! \ud83d\udc4b \u00bfQu\u00e9 tal? I'm here and ready to help. What do you need?"
+  },
+  {
+    "role": "human",
+    "content": "hi jarvis"
+  },
+  {
+    "role": "ai",
+    "content": "Hey! \ud83d\udc4b What's up? How can I assist you today?"
+  }
+]
